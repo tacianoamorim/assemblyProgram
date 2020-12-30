@@ -1,62 +1,128 @@
+#------------------------------------------------------------------------------------
+# ALUNOS: Gustavo, João, Maurilio, Taciano
+#------------------------------------------------------------------------------------
+
 .data
-	fileNameIn: .asciiz "text.in" 
-	fileNameOut: .asciiz "text.out"  
+	arquivoEntrada: .asciiz "C:/fabrica/workspaceUFRPE/assemblyProgram/text.in" 
+	arquivoSaida: .asciiz "C:/fabrica/workspaceUFRPE/assemblyProgram/text.out"  
 	
-	fileWords: .word 
+	mensagemFim: .asciiz "------------- FIM PROCESSAMENTO -------------------"  
+	mensagemTeste: .asciiz " TESTO ALTERADO"  
+	
+	conteudoArquivo: .space  1024
 	
 .text
 
-	.globl main		# Chama a funcao principal
+	jal lerArquivoEntrada			# Le o conteudo do arquivo
+	move $s0, $v1				# Transfere o texto
+	
+	move $a0, $s0
+	jal imprimirString			# Imprime a String
+	
+	move $a0, $s0				# Transfere o texto
+	jal processarConteudoArquivo		# Processa a String
+	move $s1, $v1				# Transfere o texto
 
-	main: # Funcao principal do programa
+	move $a0, $s1	
+	jal imprimirString			# Imprime a String	
+	
+	move $a2, $v1
+	jal gravarArquivoSaida			# Imprime a String
+	
+	jal encerrarPrograma			# Finaliza o programa
 
-		# Parte para ler o arquivo
-		li $v0, 13 #syscall pra abrir o arquivo com as strings pre-definidas
-		la $a0,fileNameIn    #nome do arquivo
-		li $a1,0 #marca pra leitura
-		syscall #abri o arquivo
-		move $s0, $v0 #salva a descrição do arquivo
+	
+	#--------------------------------------------------------------------------------------
+	# LE CONTEUDO DO ARQRUIVO DE ENTRADA 
+	# Retorna valor no registrador $v1
+	#--------------------------------------------------------------------------------------	
+	lerArquivoEntrada:				# Funcao para abrir o arquivo de leitura 
+		# Abre o arquivo
+		li $v0, 13 			# syscall para abrir o arquivo 
+		la $a0,arquivoEntrada    	# nome do arquivo
+		li $a1,0 			# 0: leitura 1: escrita
+		syscall 			
+		
+		move $s0, $v0 			# salva a descrição do arquivo
 
-		li $v0, 14 #syscall pra ler do arquivo
+		# Ler o arquivo
 		move $a0, $s0 
-		la $a1, fileWords
-		li $a2, 100
+		li $v0, 14 			# syscall para ler do arquivo
+		la $a1, conteudoArquivo		# transfere o buffer para textFile 	
+		li $a2, 1024   			# tamanho maximo do buffer
 		syscall
+		
+		move $v1, $a1
 
-		li $v0, 4
-		la $a0, fileWords
+		# fechar o arquivo
+		li $v0, 16			# syscall para fechar o arquivo 
+		move $a0, $s0
+		syscall	
+		
+		jr $ra				# retorna para a  
+
+	
+	#--------------------------------------------------------------------------------------
+	# PROCESSA A STRING 
+	# Recebe o valor no registrador $a0
+	# Retorna valor no registrador $v1
+	#--------------------------------------------------------------------------------------	
+	processarConteudoArquivo:
+		move $v1, $a0	
+		la $a0, mensagemTeste
+		move $v1, $a0	
+		
+		jr $ra	
+									
+
+	#--------------------------------------------------------------------------------------
+	# GRAVAR CONTEUDO NO ARQRUIVO DE SAIDA 
+	# Recebe o valor no registrador $a2
+	#--------------------------------------------------------------------------------------	
+	gravarArquivoSaida:				# Funcao para gravar o arquivo de leitura 
+	
+		move $s2,$a2
+	
+		# Abre o arquivo
+		li $v0, 13 			# syscall para abrir o arquivo 
+		la $a0,arquivoSaida    		# nome do arquivo
+		li $a1,1 			# 0: leitura 1: escrita
 		syscall 
-
-		li $v0, 16
-		move $a0, $s0
+		move $s1,$v0			
+		
+		# Escreve o arquivo
+		li $v0, 15 			# syscall para escrever do arquivo
+		move $a0,$s1
+		
+		move $a1, $s2		# transfere o buffer para textFile 	
+		li $a2, 1024   			# tamanho maximo do buffer
 		syscall
+		
+		move $v1, $a1
 
-		# Parte para ler o arquivo
-		li $v0, 13 #syscall pra abrir o arquivo com as strings pre-definidas
-		la $a0,fileNameOut    #nome do arquivo
-		li $a1,0 #marca pra leitura
-		syscall #abri o arquivo
-		move $s0, $v0 #salva a descrição do arquivo     
-
-		li $v0, 16 #Escreve
-		li $s0,10
-		move $a0, $s0
-		syscall    	
-
-
-	openReadFile:			# Funcao para abrir o arquivo de leitura 
+		# fechar o arquivo
+		li $v0, 16			# syscall para fechar o arquivo 
+		move $a0, $s1
+		syscall	
+		
+		jr $ra				# retorna para a  
 	
 	
-	loadReadFile:			# Funcao para Ler o arquivo	
+	#--------------------------------------------------------------------------------------
+	# IMPRIME UM TEXTO
+	# Imprime o que estiver no registrador $a0
+	#--------------------------------------------------------------------------------------					
+	imprimirString: 
+		# Imprime o conteudo do arquivo
+		li $v0, 4			# syscall para impressao
+		syscall 
+		
+		jr $ra	
+		
 
-
-	closeReadFile:			# Funcao para fechar o arquivo de leitura
-
-	
-	openWriteFile:			# Funcao para abrir o arquivo de escrita 
-
-	
-	loadWriteFile:			# Funcao para Ler o arquivo	
-
-
-	closeWriteFile:			# Funcao para fechar o arquivo de escrita
+	#--------------------------------------------------------------------------------------
+	# ENCERRA O PROGRAMA 
+	#--------------------------------------------------------------------------------------	
+	encerrarPrograma: 
+		li $v0, 10
+		syscall 				
