@@ -1,58 +1,127 @@
 #------------------------------------------------------------------------------------
-# ALUNOS: Gustavo, João, Maurilio, Taciano
+# ALUNOS: Gustavo Tabosa, João Teixeira, 
+#	  Maurilio Medeiros, Taciano Amorim
+#
+#
+# $t1 -> Caracter avaliado
+# $t2 -> Indice do array do textoOriginal
+# $t3 -> Quantidade de caracteres do texto
+# $t4 -> Indice do array da palavra
+# $t5 -> Quantidade de caracteres da palavra	
+# $t6 -> Armazena o codigo do caracter #
 #------------------------------------------------------------------------------------
+.include "macros.asm"
 
 .data
 	arquivoEntrada: .asciiz "C:/fabrica/workspaceUFRPE/assemblyProgram/text.in" 
 	arquivoSaida:   .asciiz "C:/fabrica/workspaceUFRPE/assemblyProgram/text.out"  
 	
-	# temporario
-	mpi: .asciiz "\n->PROCESSAMENTO INICIADO "  
-	mla: .asciiz "\n->LENDO O ARQUIVO " 
-	mga: .asciiz "\n->GRAVANDO O ARQUIVO "
-	mpt: .asciiz "\n->PROCESSANDO O TEXTO "	
-	mpf: .asciiz "\n->PROCESSAMENTO FINALIZADO "  
-	ml:  .asciiz "\n->- - - - - - - - - - - - - - - - - - - - - - - - -  "  
-	eb:  .asciiz " "  
-	
-	textoNovo:	.space 53
-	textoLido:	.space 53
-	
-	tamanhoString:	.word 53
-	
-	
+	textoFinal:	.space 71
+	textoOriginal:	.space 71
+		
 .text
 
-	.globl main
+	move $t2, $zero # Zera o indice do array do textoOriginal
+	li   $t3, 71    # Seta o tamanho de caracteres do textoOriginal
+	
+	#move $t4, $zero # Zera o indice do array do palavra
+	#li   $t5, 10    # Seta o tamanho de caracteres do palavra	
+	
+	#li   $t6, 35    # Seta o codigo do caracter #
 
-	#--------------------------------------------------------------------------------------
-	# METODO PRINCIPAL
-	#--------------------------------------------------------------------------------------	
-	main:
-		# INICIA AS VARIAVEIS
-		move $t2, $zero
-		lw $t9, tamanhoString
-		sub $t9, $t9, 1
-
-		la $a0, mpi
-		jal imprimirString			# Imprime PROCESSAMENTO INICIADO
-
-		la $a0, mla
-		jal imprimirString			# Imprime LENDO O ARQUIVO
+	print_str ("INICIANDO O PROCESSO\n")
 		
-		jal lerArquivoEntrada			# Le o conteudo do arquivo
+	jal lerArquivoEntrada	# Le o conteudo do arquivo
 			
-		la $a0, mpt
-		jal imprimirString			# Imprime PROCESSANDO O TEXTO
-			
-		j processarConteudoArquivo		# Processa a String
+		
+	#----------------------------------------------------------------------------
+	# LOOP que varre todo o texto lido, caracter por caracter 
+	#----------------------------------------------------------------------------	
+	loopTexto:
+		# Verifica se o texto foi todo lido
+		beq $t2, $t3, gravarArquivoSaida  # if $t2 == $t3
+	
+		# Recupera o caracter na posicao do indice
+		lb $t1, textoOriginal($t2) # Pega o caracter da posicao
+
+		# Verifica se $t1 tem um numero
+		sge $s1, $t1, 47  	# IF $t1 > 47
+		sle $s2, $t1, 58  	# IF $t1 < 58
+		and $s3, $s1, $s2 	# $s3 = $s1 and $s2
+		beq $s3, 1, gravarArquivoSaida 	
+		
+		# Caso $t1 seja uma letra minuscula
+		sge $s1, $t1, 64 	# IF $t1 > 64
+		sle $s2, $t1, 91  	# IF $t1 < 91 
+		and $s3, $s1, $s2 	# $s3 = $s1 and $s2 		
+		beq $s3, 1, maiusculo		
+
+		# Caso $t1 seja uma letra maiuscula
+		sge $s1, $t1, 96 	# IF $t1 > 96
+		sle $s2, $t1, 123  	# IF $t1 < 123  
+		and $s3, $s1, $s2 	# $s3 = $s1 and $s2   		
+		beq $s3, 1, minusculo
+		
+		# Caso $t1 seja o caracter ç
+		beq $t1, -89, cedilhaMinusculo	# Se $t1 armazena ç
+		
+		# Caso $t1 seja o caracter ã
+		beq $t1, -93, letraAComTil	# Se $t1 armazena ã		
+				
+		j gravarCaracter # Não é nenhum caracter validado
+		
+
+	#----------------------------------------------------------------------------
+	# ARMAZENA O CARACTER NA NOVA STRING 
+	#----------------------------------------------------------------------------				
+	gravarCaracter:
+		# Grava o caracter na posicao do indice
+		sb $t1, textoFinal($t2) # Grava o caracter na posicao do indice
+				
+		# Soma mais 1 ao indice
+		addi $t2, $t2, 1 # $t2++
+		
+		j loopTexto
+				
+
+	#----------------------------------------------------------------------------
+	# RETORNA A LETRA MAIUSCULA 
+	#----------------------------------------------------------------------------
+	maiusculo:
+		add $t1, $t1, 32 # Converte para minusculo
+		j gravarCaracter
+		
+		
+	#----------------------------------------------------------------------------
+	# RETORNA A LETRA MINUSCULA 
+	#----------------------------------------------------------------------------
+	minusculo:
+		sub $t1, $t1, 32 # Converte para maiusculo
+		j gravarCaracter	
+	
+	#-----------------------------------------------------------------------------
+	# RETORNA A LETRA MAIUSCULA DO ç
+	#-----------------------------------------------------------------------------	
+	cedilhaMinusculo:
+		li $t1, -121 # Converte para maiusculo
+		j gravarCaracter
+		
+
+	#-----------------------------------------------------------------------------
+	# RETORNA A LETRA MAIUSCULA DO ã
+	#-----------------------------------------------------------------------------				
+	letraAComTil:
+		li $t1, -125 # Converte para maiusculo
+		j gravarCaracter
 
 	
-	#--------------------------------------------------------------------------------------
+	#----------------------------------------------------------------------------
 	# LE CONTEUDO DO ARQRUIVO DE ENTRADA 
 	# Retorna valor no registrador $v1
-	#--------------------------------------------------------------------------------------	
-	lerArquivoEntrada:				# Funcao para abrir o arquivo de leitura 
+	#----------------------------------------------------------------------------	
+	lerArquivoEntrada:	# Funcao para abrir o arquivo de leitura 
+		print_str ("LENDO ARQUIVO \n")
+
 		# Abre o arquivo
 		li $v0, 13 			# syscall para abrir o arquivo 
 		la $a0,arquivoEntrada    	# nome do arquivo
@@ -64,8 +133,8 @@
 		# Ler o arquivo
 		move $a0, $s0 
 		li $v0, 14 			# syscall para ler do arquivo
-		la $a1, textoLido		# transfere o buffer para textFile 	
-		la $a2, tamanhoString  			# tamanho maximo do buffer
+		la $a1, textoOriginal		# transfere o buffer para textFile 	
+		move $a2, $t3  			# tamanho maximo do buffer
 		syscall
 		
 		move $v1, $a1
@@ -77,128 +146,13 @@
 		
 		jr $ra				# retorna para a  
 
-	
-	#--------------------------------------------------------------------------------------
-	# PROCESSA A STRING 
-	# Recebe o valor no registrador $a0
-	# Retorna valor no registrador $v1
-	#--------------------------------------------------------------------------------------	
-	processarConteudoArquivo:
-		lb $t1, textoLido($t2) 		# LOAD BYTE a BYTE
-		
-		# VERIFICA SE A LETRA E MINISCULA PELA TABELA ASCII
-		sge $t4, $t1, 97 
-		sle $t5, $t2, 122 
-		and $t3, $t4, $t5 		# ENTRE [97;122]# T3 = LETRA MINUSCULA?
-		beq $t3, 1, minusculo 		# CONVERTE!
-		
-		# VERIFICA SE A LETRA E MAIUSCULOS PELA TABELA ASCII
-		sge $t4, $t1, 65 
-		sle $t5, $t2, 90 
-		and $t3, $t4, $t5 		# ESTAO ENTRE [65;90]# T3 = LETRA MAISCULA?
-		beq $t3, 1, maisculo 		# CONVERTE!
 
-		# VERIFICA SE A LETRA E MAIUSCULOS PELA TABELA ASCII
-		sge $t4, $t1, 48 
-		sle $t5, $t2, 57 
-		and $t3, $t4, $t5 		# ESTAO ENTRE [48;57]# T3 = LETRA MAISCULA?
-		beq $t3, 1, movimentaCursor 	# CONVERTE!
-
-
-		# SE NAO CHEGOU NO LIMITE, CONTINUA
-		beq $t3, 0, movimentaCursor	
-		
-		beq $t2, 53, gravarArquivoSaida			
-	
-		
-	processarConteudoArquivo2:
-	
-		jal converteTexto
-		
-		#la $a0, textoNovo	
-		#jal imprimirString			# Imprime a String	
-
-		#move $v1, $s2
-		
-		jr $ra	
-			
-	#--------------------------------------------------------------------------------------
-	# RETORNA A LETRA MAIUSCULA 
-	# Recebe o valor no registrador 
-	# Retorna valor no registrador $v1
-	#--------------------------------------------------------------------------------------		
-	converteTexto:
-		lb $t1, textoLido($t2) #LOAD BYTE a BYTE
-		
-		# VERIFICA SE A LETRA E MINISCULA PELA TABELA ASCII
-		sge $t4, $t1, 97 
-		sle $t5, $t2, 122 
-		and $t3, $t4, $t5 # ENTRE [97;122]# T3 = LETRA MINUSCULA?
-		beq $t3, 1, minusculo #CONVERTE!
-		
-		# VERIFICA SE A LETRA E MAIUSCULOS PELA TABELA ASCII
-		sge $t4, $t1, 65 
-		sle $t5, $t2, 90 
-		and $t3, $t4, $t5 # ESTAO ENTRE [65;90]# T3 = LETRA MAISCULA?
-		beq $t3, 1, maisculo #CONVERTE!
-
-		# VERIFICA SE A LETRA E MAIUSCULOS PELA TABELA ASCII
-		sge $t4, $t1, 48 
-		sle $t5, $t2, 57 
-		and $t3, $t4, $t5 # ESTAO ENTRE [48;57]# T3 = LETRA MAISCULA?
-		beq $t3, 1, movimentaCursor #CONVERTE!
-
-
-		# SE NAO CHEGOU NO LIMITE, CONTINUA
-		beq $t3, 0, movimentaCursor	
-		
-		beq $t2, 53, gravarArquivoSaida			
-
-	#--------------------------------------------------------------------------------------
-	# RETORNA A LETRA MAIUSCULA 
-	#--------------------------------------------------------------------------------------				
-	maisculo:
-		add $t1, $t1, 32 	# CONVERSAO MAIUSCULO MINUSCULO
-		j atualizaTexto 	# RETORNA
-
-
-	#--------------------------------------------------------------------------------------
-	# RETORNA A LETRA MINUSCULA 
-	#--------------------------------------------------------------------------------------	
-	minusculo:
-		sub $t1, $t1, 32 	# CONVERSAO MAIUSCULO MINUSCULO
-		j atualizaTexto 	# RETORNA	
-
-
-	#--------------------------------------------------------------------------------------
-	# RETORNA A LETRA MAIUSCULA 
-	# Recebe o valor no registrador $
-	# Retorna valor no registrador $
-	#--------------------------------------------------------------------------------------			
-	atualizaTexto:
-		sub $t7, $t9, $t2 # SUBTRAI O INDEXADOR DE SALVAMENTO ( PERCEBA QUE ESSE ESQUEMA INVERTE A STRING! )
-		sb $t1, textoNovo($t7) # SALVA (INVERTIDO)
-		addi $t2, $t2, 1 # INCREMENTA O INDEXADOR DE LEITURA!
-		addi $a0, $t9, 1 # UM REGISTRADOR PERMANENTE PARA GUARDAR O LIMITE SUPERIOR
-		
-		bne $t2, $a0, processarConteudoArquivo # SE NAO CHEGOU NO LIMITE, CONTINUA		
-
-
-	#--------------------------------------------------------------------------------------
-	# RETORNA A LETRA MAIUSCULA 
-	#--------------------------------------------------------------------------------------			
-	movimentaCursor:
-		addi $t2, $t2, 1 # INCREMENTA O INDEXADOR DE LEITURA!
-		addi $a0, $t9, 1 # UM REGISTRADOR PERMANENTE PARA GUARDAR O LIMITE SUPERIOR
-
-
-	#--------------------------------------------------------------------------------------
+	#----------------------------------------------------------------------------
 	# GRAVAR CONTEUDO NO ARQRUIVO DE SAIDA 
-	#--------------------------------------------------------------------------------------	
+	#----------------------------------------------------------------------------
 	gravarArquivoSaida:		# Funcao para gravar o arquivo de leitura 
 		
-		la $a0, mga
-		jal imprimirString			# Imprime GRAVANDO O ARQUIVO
+		print_str ("GRAVANDO ARQUIVO \n")
 			
 		# Abre o arquivo
 		li $v0, 13 			# syscall para abrir o arquivo 
@@ -211,7 +165,7 @@
 		li $v0, 15 			# syscall para escrever do arquivo
 		move $a0,$s1
 		
-		la $a1, textoNovo		# transfere o buffer para textFile 	
+		la $a1, textoFinal		# transfere o buffer para textFile 	
 		la $a2, 53  		# tamanho maximo do buffer
 		syscall
 
@@ -222,37 +176,12 @@
 		
 		j encerrarPrograma
 	
-							
-	#--------------------------------------------------------------------------------------
-	# IMPRIME UM TEXTO
-	# Imprime o que estiver no registrador $a0
-	#--------------------------------------------------------------------------------------					
-	imprimirString: 
-		# Imprime o conteudo do arquivo
-		li $v0, 4			# syscall para impressao
-		syscall 
-		jr $ra	
-
-
-	#--------------------------------------------------------------------------------------
-	# IMPRIME UM TEXTO
-	# Imprime o que estiver no registrador $a0
-	#--------------------------------------------------------------------------------------					
-	imprimirInt: 
-		# Imprime o conteudo do arquivo
-		li $v0, 1			# syscall para impressao
-		syscall 
-		jr $ra					
-
-
-	#--------------------------------------------------------------------------------------
+	#----------------------------------------------------------------------------
 	# ENCERRA O PROGRAMA 
-	#--------------------------------------------------------------------------------------	
+	#----------------------------------------------------------------------------
 	encerrarPrograma: 
 
-		la $a0, mpf
-		jal imprimirString			# Imprime PROCESSAMENTO FINALIZADO	
+		print_str ("PROCESSAMENTO FINALIZADO \n")
 	
 		li $v0, 10
-		syscall 	
-
+		syscall 
